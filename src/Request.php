@@ -4,118 +4,197 @@ namespace Moyuuuuuuuu\Nutrition;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
-use Opis\JsonSchema\Validator;
 use RuntimeException;
 
 class Request
 {
+    private const DEFAULT_DOMAIN = 'https://qianfan.baidubce.com';
+    private const DEFAULT_MODEL = 'ernie-4.5-turbo-vl-latest';
+    private const API_PATH = '/v2/chat/completions';
+
     /**
      * @var Client
      */
     protected $client;
 
+    /**
+     * @var string
+     */
+    protected $apiKey;
 
-    public function __construct()
+    /**
+     * @var string
+     */
+    protected $promptTemplate;
+
+    /**
+     * @var array
+     */
+    protected $contents = [];
+
+    public function __construct(?string $apiKey = null, string $domain = self::DEFAULT_DOMAIN, string $model = self::DEFAULT_MODEL)
     {
+        $this->apiKey = $apiKey ?: (string) getenv('API_KEY');
+        if (empty($this->apiKey)) {
+            throw new RuntimeException('API Key is required');
+        }
+
+        $this->model = $model;
+
         $this->client = new Client([
-            'verify' => false
+            'base_uri' => $domain,
+            'verify'   => false
         ]);
+
+        $templatePath = __DIR__ . '/template';
+        if (file_exists($templatePath)) {
+            $this->promptTemplate = file_get_contents($templatePath);
+        }
     }
 
-
-    public function do(string $imageUrl)
+    /**
+     * 添加文本内容
+     *
+     * @param string $text
+     * @return $this
+     */
+    public function addText(string $text): self
     {
-        if (empty($imageUrl)) {
+        $this->contents[] = [
+            'type' => 'text',
+            'text' => $text,
+        ];
+        return $this;
+    }
+
+    /**
+     * 添加图片内容
+     *
+     * @param string $imagePath
+     * @return $this
+     */
+    public function addImage(string $imagePath): self
+    {
+        if (!file_exists($imagePath)) {
+            throw new RuntimeException("Image file not found: {$imagePath}");
+        }
+
+        $imageData = base64_encode(file_get_contents($imagePath));
+        $this->contents[] = [
+            'type'      => 'image_url',
+            'image_url' => ['url' => $imageData],
+        ];
+        return $this;
+    }
+
+    /**
+     * 清空已添加的内容
+     *
+     * @return $this
+     */
+    public function clearContents(): self
+    {
+        $this->contents = [];
+        return $this;
+    }
+
+    /**
+     * 设置请求参数
+     *
+     * @param array $options
+     * @return $this
+     */
+    public function setOptions(array $options): self
+    {
+        $this->options = array_merge($this->options, $options);
+        return $this;
+    }
+
+    /**
+     * @param string|null $imageUrl
+     * @return array|null
+     * @throws GuzzleException
+     */
+    public function do(?string $imageUrl = null): ?array
+    {
+        // 兼容旧逻辑：如果传入了 imageUrl，则清空之前添加的内容并只处理这张图
+        if ($imageUrl !== null) {
+            $this->clearContents();
+            if ($this->promptTemplate) {
+                $this->addText($this->promptTemplate);
+            }
+            $this->addImage($imageUrl);
+        }
+
+        if (empty($this->contents)) {
             return null;
         }
-        $content = [
-            [
-                'text' => file_get_contents(__DIR__ . '/template'),
-                'type' => 'text',
-            ],
-            [
-                'type'      => 'image_url',
-                'image_url' => [
-                    'url' => base64_encode(file_get_contents($imageUrl)),
-                ],
-            ]
-        ];
-        $payload = [
-            'model'         => 'ernie-4.5-turbo-vl-latest',
-            'messages'      => [
-                [
-                    'content' => $content,
-                    'role'    => 'user',
-                ]
-            ],
-            'fps'           => 2,
-            'temperature'   => 0.2,
-            'top_p'         => 0.8,
-            'penalty_score' => 1,
-            'stop'          => [],
-            'use_audio'     => true,
-            'compression'   => true
-        ];
+
+        $messages = $this->buildMessages($this->contents);
+        $payload  = $this->buildPayload($messages);
+
         try {
-            $response = $this->client->post('https://qianfan.baidubce.com/v2/chat/completions', [
+            $response = $this->client->post(self::API_PATH, [
                 'json'    => $payload,
                 'headers' => [
-                    'Authorization' => 'Bearer ' . getenv('API_KEY'),
+                    'Authorization' => 'Bearer ' . $this->apiKey,
                     'Content-Type'  => 'application/json',
                 ]
             ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+            return $this->format($data ?: []);
         } catch (GuzzleException $e) {
-            $error = $e->getMessage();
-            var_dump($error);
-            exit;
+            throw $e;
         }
-        return $this->format(json_decode($response->getBody()->getContents(), true));
     }
 
-    public function format(array $resp)
+    /**
+     * 构建消息内容
+     *
+     * @param array $contents
+     * @param string $role
+     * @return array
+     */
+    protected function buildMessages(array $contents, string $role = 'user'): array
     {
-        return $resp;
-// 3. 提取模型输出的 JSON 字符串
-        $modelJson = null;
-        foreach ($resp['output'] as $item) {
-            if ($item['type'] === 'message') {
-                $modelJson = $item['content'][0]['text'] ?? null;
-                break;
-            }
+        return [
+            [
+                'role'    => $role,
+                'content' => $contents,
+            ]
+        ];
+    }
+
+    /**
+     * 构建请求载荷
+     *
+     * @param array $messages
+     * @return array
+     */
+    protected function buildPayload(array $messages): array
+    {
+        return array_merge([
+            'model'    => $this->model,
+            'messages' => $messages,
+        ], $this->options);
+    }
+
+    /**
+     * @param array $response
+     * @return array|null
+     */
+    public function format(array $response): ?array
+    {
+        if (isset($response['error_code']) || isset($response['code'])) {
+            $message = $response['error_msg'] ?? $response['message'] ?? 'Unknown error';
+            throw new RuntimeException($message);
         }
 
-        if (!$modelJson) {
-            throw new RuntimeException('No model output found');
+        $content = $response['choices'][0]['message']['content'] ?? '';
+        if (empty($content)) {
+            return null;
         }
-
-// 4. 二次 decode（模型真正输出）
-        $data = json_decode($modelJson);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new RuntimeException('Model output is not valid JSON');
-        }
-
-// 5. 加载 JSON Schema（关键）
-        $schemaJson = file_get_contents(__DIR__ . '/storage/schema/nutrition.schema.json');
-        $schema     = json_decode($schemaJson);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new RuntimeException('Schema JSON invalid');
-        }
-
-// 6. 校验
-        $validator = new Validator();
-        $result    = $validator->validate($data, $schema);
-
-        if (!$result->isValid()) {
-            foreach ($result->error() as $error) {
-                echo sprintf(
-                    "Path: %s | Keyword: %s\n",
-                    $error->dataPointer(),
-                    $error->keyword()
-                );
-            }
-            throw new RuntimeException('Schema validation failed');
-        }
-        return $data;
+        return $content;
     }
 }
