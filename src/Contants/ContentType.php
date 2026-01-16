@@ -10,7 +10,13 @@ enum ContentType: string
      */
     case TEXT = 'text';
 
+    /**
+     * 图片
+     */
     case IMAGE_URL = 'image_url';
 
+    /**
+     * 视频
+     */
     case VIDEO_URL = 'video_url';
 }
