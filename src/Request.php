@@ -4,13 +4,15 @@ namespace Moyuuuuuuuu\Nutrition;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Moyuuuuuuuu\Nutrition\Contants\ContentType;
+use Moyuuuuuuuu\Nutrition\Contants\Role;
 use RuntimeException;
 
 class Request
 {
     private const DEFAULT_DOMAIN = 'https://qianfan.baidubce.com';
-    private const DEFAULT_MODEL = 'ernie-4.5-turbo-vl-latest';
-    private const API_PATH = '/v2/chat/completions';
+    private const DEFAULT_MODEL  = 'ernie-4.5-turbo-vl-latest';
+    private const API_PATH       = '/v2/chat/completions';
 
     /**
      * @var Client
@@ -23,18 +25,55 @@ class Request
     protected $apiKey;
 
     /**
-     * @var string
-     */
-    protected $promptTemplate;
-
-    /**
      * @var array
      */
     protected $contents = [];
 
+    /**
+     * @var string system user assistant
+     */
+    protected $role = Role::USER->value;
+
+    /**
+     * 使用的模型
+     * @var string
+     */
+    protected $model;
+
+    /**
+     * 其他参数
+     * @var array{
+     *     stream_options:array{
+     *         include_usage:bool,//流式响应是否输出usage
+     *     },//流式响应的选项，说明：
+     *     temperature:integer,//）较高的数值会使输出更加随机，而较低的数值会使其更加集中和确定 ,该参数支持模型及取值范围等，请参考千帆-模型默认参数说明
+     *     top_p:integer,//影响输出文本的多样性，取值越大，生成文本的多样性越强
+     *     penalty_score:float,//通过对已生成的token增加惩罚，减少重复生成的现象
+     *     max_tokens:int,
+     *     enable_thinking:bool,
+     *     seed:integer,//取值范围: （0,2147483647‌），会由模型随机生成，默认值为空
+     *     stop:string[],
+     *     user:string,
+     *     web_search:array{
+     *         enable:bool,//是否开启实时搜索功能
+     *         enable_citation:bool,//是否开启上角标返回
+     *         enable_trace:bool,//是否返回搜索溯源信息
+     *         enable_status:bool,//是否返回搜索信号
+     *     },
+     *     response_format:array{
+     *         type:string,//指定响应内容的格式 json_object text json_schema
+     *         json_schema:array,//json_schema格式，请参考 @link https://json-schema.org/understanding-json-schema/reference
+     *     },
+     *     metadata:array{
+     *
+     *     }
+     * }
+     */
+    protected $options;
+
     public function __construct(?string $apiKey = null, string $domain = self::DEFAULT_DOMAIN, string $model = self::DEFAULT_MODEL)
     {
-        $this->apiKey = $apiKey ?: (string) getenv('API_KEY');
+        $this->apiKey = $apiKey ?: (string)getenv('API_KEY');
         if (empty($this->apiKey)) {
             throw new RuntimeException('API Key is required');
         }
@@ -45,11 +84,6 @@ class Request
             'base_uri' => $domain,
             'verify'   => false
         ]);
-
-        $templatePath = __DIR__ . '/template';
-        if (file_exists($templatePath)) {
-            $this->promptTemplate = file_get_contents($templatePath);
-        }
     }
 
     /**
@@ -60,9 +94,10 @@ class Request
      */
     public function addText(string $text): self
     {
+        $typeText         = ContentType::TEXT->value;
         $this->contents[] = [
-            'type' => 'text',
-            'text' => $text,
+            'type'    => $typeText,
+            $typeText => $text,
         ];
         return $this;
     }
@@ -79,11 +114,44 @@ class Request
             throw new RuntimeException("Image file not found: {$imagePath}");
         }
 
-        $imageData = base64_encode(file_get_contents($imagePath));
+        $imageData        = base64_encode(file_get_contents($imagePath));
+        $typeText         = ContentType::IMAGE_URL->value;
         $this->contents[] = [
-            'type'      => 'image_url',
-            'image_url' => ['url' => $imageData],
+            'type'    => $typeText,
+            $typeText => ['url' => $imageData],
         ];
+        return $this;
+    }
+
+    public function addVideo(string $videoPath): self
+    {
+        if (!file_exists($videoPath)) {
+            throw new RuntimeException("Video file not found: {$videoPath}");
+        }
+        $videoData        = base64_encode(file_get_contents($videoPath));
+        $typeText         = ContentType::VIDEO_URL->value;
+        $this->contents[] = [
+            'type'    => $typeText,
+            $typeText => ['url' => $videoData],
+        ];
+        return $this;
+    }
+
+    /**
+     *
+     * @param string $content
+     * @param ContentType $type
+     * @return $this
+     * @throws \Exception
+     */
+    public function addContent(string $content, ContentType $type): self
+    {
+        match ($type) {
+            ContentType::TEXT => $this->addText($content),
+            ContentType::IMAGE_URL => $this->addImage($content),
+            ContentType::VIDEO_URL => $this->addVideo($content),
+            default => throw new \Exception('不支持的消息类型')
+        };
         return $this;
     }
 
@@ -95,6 +163,12 @@ class Request
     public function clearContents(): self
     {
         $this->contents = [];
+        return $this;
+    }
+
+    public function setRole(Role $role = Role::USER): self
+    {
+        $this->role = $role->value;
         return $this;
     }
 
@@ -115,23 +189,13 @@ class Request
      * @return array|null
      * @throws GuzzleException
      */
-    public function do(?string $imageUrl = null): ?array
+    public function send(): ?array
     {
-        // 兼容旧逻辑：如果传入了 imageUrl，则清空之前添加的内容并只处理这张图
-        if ($imageUrl !== null) {
-            $this->clearContents();
-            if ($this->promptTemplate) {
-                $this->addText($this->promptTemplate);
-            }
-            $this->addImage($imageUrl);
-        }
-
         if (empty($this->contents)) {
-            return null;
+            throw new RuntimeException('No content available');
         }
 
-        $messages = $this->buildMessages($this->contents);
-        $payload  = $this->buildPayload($messages);
+        $payload = $this->buildPayload();
 
         try {
             $response = $this->client->post(self::API_PATH, [
@@ -156,12 +220,12 @@ class Request
      * @param string $role
      * @return array
      */
-    protected function buildMessages(array $contents, string $role = 'user'): array
+    protected function buildMessages(): array
     {
         return [
             [
-                'role'    => $role,
-                'content' => $contents,
+                'role'    => $this->role,
+                'content' => $this->contents,
             ]
         ];
     }
@@ -176,7 +240,7 @@ class Request
     {
         return array_merge([
             'model'    => $this->model,
-            'messages' => $messages,
+            'messages' => $this->buildMessages($messages),
         ], $this->options);
     }
 
@@ -184,17 +248,18 @@ class Request
      * @param array $response
      * @return array|null
      */
-    public function format(array $response): ?array
+    public function format(array $data): ?array
     {
-        if (isset($response['error_code']) || isset($response['code'])) {
-            $message = $response['error_msg'] ?? $response['message'] ?? 'Unknown error';
-            throw new RuntimeException($message);
+        if (isset($data['error'])) {
+            throw new \Exception('接口错误：' . $data['error']['message'] ?? '未知错误');
+        }
+        if (isset($data['error_code'])) {
+            throw new \Exception('接口错误:' . $data['error_msg']);
         }
 
-        $content = $response['choices'][0]['message']['content'] ?? '';
-        if (empty($content)) {
-            return null;
+        if (!empty($data['choices']) && isset($data['choices'][0]['message']['content'])) {
+            return $data['choices'][0]['message']['content'] ?? [];
         }
-        return $content;
+        throw new \Exception('没有生成内容，choices 为空或格式异常。');
     }
 }

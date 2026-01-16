@@ -10,7 +10,8 @@ foreach ($lines as $line) {
 }
 
 
-$request = new \Moyuuuuuuuu\Nutrition\Request();
-$image   = $basePath . '/images/3.jpeg';
-$response = $request->addImage($image)->addText(file_get_contents($basePath.'/src/template'))->do();
-var_dump($response);
+$request  = new \Moyuuuuuuuu\Nutrition\Request();
+$image    = $basePath . '/images/3.jpeg';
+$response = $request->addImage($image)->addText(file_get_contents($basePath . '/src/template'))->do();
+
+$response = \Moyuuuuuuuu\Nutrition\Util::parseNutrition($response);
