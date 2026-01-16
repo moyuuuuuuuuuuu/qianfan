@@ -25,7 +25,7 @@ class Util
         return is_array($result) ? $result : [];
     }
 
-    static function baseFile(string $filePath, string $mimeType = null): string
+    static function baseFile(string $filePath, string $mimeType = null,bool $withBase = true): string
     {
         if (!is_file($filePath) || !is_readable($filePath)) {
             throw new RuntimeException("File not found or not readable: {$filePath}");
@@ -46,7 +46,9 @@ class Util
         }
 
         $base64 = base64_encode($content);
-
+        if(!$withBase) {
+            return $base64;
+        }
         return "data:{$mimeType};base64,{$base64}";
     }
 }

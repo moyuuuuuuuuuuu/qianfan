@@ -80,6 +80,12 @@ class BasePayload
         return $this;
     }
 
+    public function setHeader(string $key, mixed $value): self
+    {
+        $this->headers[$key] = $value;
+        return $this;
+    }
+
     /**
      * 快速设置Content-Type
      * @param string $contentType

@@ -2,6 +2,7 @@
 
 use Moyuuuuuuuu\Nutrition\Payload\Universal;
 use Moyuuuuuuuu\Nutrition\Contants\{RequestMethod, Role, ContentType};
+use Moyuuuuuuuu\Nutrition\Util;
 
 $basePath = dirname(__DIR__);
 include $basePath . '/vendor/autoload.php';
@@ -47,12 +48,34 @@ $payload = (new Universal())
                 ],
                 [
                     'type'      => 'image_url',
-                    'image_url' => ['url' => \Moyuuuuuuuu\Nutrition\Util::baseFile($basePath . '/images/1.jpeg')]
+                    'image_url' => ['url' => Util::baseFile($basePath . '/images/1.jpeg')]
                 ]
             ]
         ]
     ])
     ->add('model', 'ernie-4.5-turbo-vl-latest');
+
+#向量
+$payload = (new Universal())
+    ->setDomain('https://qianfan.baidubce.com/')
+    ->setUri('/v2/embeddings')
+    ->setMethod(RequestMethod::POST)
+    ->add('model', 'Embedding-V1')
+    ->add('input', ["White T-shirt"]);
+
+#短语音识别
+$payload = (new Universal())
+    ->setDomain('http://vop.baidu.com')
+    ->setUri('/server_api')
+    ->setMethod(RequestMethod::POST)
+    ->setHeader('Content-Type', 'application/json')
+    ->add('speech', Util::baseFile($basePath . '/speech/1.m4a',null,false))
+    ->add('format', 'm4a')
+    ->add('channel', 1)
+    ->add('cuid', 'default_user')
+    ->add('dev_pid', 1537)
+    ->add('len', filesize($basePath . '/speech/1.m4a'))
+    ->add('rate', 16000);
 $request = new \Moyuuuuuuuu\Nutrition\Request(getenv('API_KEY'));
 $res     = $request->send($payload);
 
