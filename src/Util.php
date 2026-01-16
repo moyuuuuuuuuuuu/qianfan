@@ -23,41 +23,11 @@ class Util
         return is_array($result) ? $result : [];
     }
 
-    static function deepMerge(array $a, array $b): array
+    static function baseFile(string $path)
     {
-        foreach ($b as $key => $value) {
-            if (isset($a[$key]) && is_array($a[$key]) && is_array($value)) {
-                if (array_is_list($a[$key]) && array_is_list($value)) {
-                    $a[$key] = array_merge($a[$key], $value);
-                } else {
-                    $a[$key] = self::deepMerge($a[$key], $value);
-                }
-            } else {
-                $a[$key] = $value;
-            }
+        if (!(str_contains($path, 'http://') || !str_contains($path, 'https://')) && !file_exists($path)) {
+            throw new \Exception("{$path} does not exist");
         }
-        return $a;
-    }
-
-    static function arrayByDot(array &$data, string $path, mixed $value): void
-    {
-        $keys = explode('.', $path);
-        $ref  = &$data;
-
-        foreach ($keys as $i => $key) {
-
-            // 最后一个 key
-            if ($i === count($keys) - 1) {
-                $ref[$key] = $value;
-                return;
-            }
-
-            // 中间节点：必须是数组
-            if (!isset($ref[$key]) || !is_array($ref[$key])) {
-                $ref[$key] = [];
-            }
-
-            $ref = &$ref[$key];
-        }
+        return base64_encode(file_get_contents($path));
     }
 }
