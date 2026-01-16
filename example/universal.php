@@ -38,19 +38,22 @@ $payload = (new Universal())
     ->setMethod(RequestMethod::POST)
 //    ->addMessage(Role::SYSTEM, file_get_contents($basePath . '/src/Template/text'))
     ->add('messages', [
-        'role'    => Role::USER->value,
-        'content' => [
-            [
-                'type' => 'text',
-                'text' => file_get_contents($basePath . '/src/Template/image')
-            ],
-            [
-                'type'      => 'image_url',
-                'image_url' => ['url' => \Moyuuuuuuuu\Nutrition\Util::baseFile($basePath . '/images/1.jpeg')]
+        [
+            'role'    => Role::USER->value,
+            'content' => [
+                [
+                    'type' => 'text',
+                    'text' => file_get_contents($basePath . '/src/Template/image')
+                ],
+                [
+                    'type'      => 'image_url',
+                    'image_url' => ['url' => \Moyuuuuuuuu\Nutrition\Util::baseFile($basePath . '/images/1.jpeg')]
+                ]
             ]
         ]
     ])
     ->add('model', 'ernie-4.5-turbo-vl-latest');
 $request = new \Moyuuuuuuuu\Nutrition\Request(getenv('API_KEY'));
 $res     = $request->send($payload);
+
 var_dump($res);

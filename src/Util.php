@@ -2,6 +2,8 @@
 
 namespace Moyuuuuuuuu\Nutrition;
 
+use RuntimeException;
+
 class Util
 {
     /**
@@ -23,11 +25,28 @@ class Util
         return is_array($result) ? $result : [];
     }
 
-    static function baseFile(string $path)
+    static function baseFile(string $filePath, string $mimeType = null): string
     {
-        if (!(str_contains($path, 'http://') || !str_contains($path, 'https://')) && !file_exists($path)) {
-            throw new \Exception("{$path} does not exist");
+        if (!is_file($filePath) || !is_readable($filePath)) {
+            throw new RuntimeException("File not found or not readable: {$filePath}");
         }
-        return base64_encode(file_get_contents($path));
+
+        $content = file_get_contents($filePath);
+        if ($content === false) {
+            throw new RuntimeException("Failed to read file: {$filePath}");
+        }
+
+        if ($mimeType === null) {
+            $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->file($filePath);
+
+            if ($mimeType === false) {
+                throw new RuntimeException("Unable to detect MIME type: {$filePath}");
+            }
+        }
+
+        $base64 = base64_encode($content);
+
+        return "data:{$mimeType};base64,{$base64}";
     }
 }

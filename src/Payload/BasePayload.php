@@ -18,6 +18,8 @@ class BasePayload
     // 请求方法（默认POST，支持动态修改）
     private string $method = 'POST';
 
+    private array $multipart = [];
+
     /**
      * 通用参数添加（适配所有接口，支持数组路径）
      * @param string $key 支持"xxx.0.xxx"格式的嵌套键，如"audio.format"
@@ -136,4 +138,85 @@ class BasePayload
         // 默认Content-Type，可被自定义覆盖
         return array_merge(['Content-Type' => 'application/json'], $this->headers);
     }
+
+
+    /**
+     * 根据Content-Type构建请求体
+     * @param array $params 请求参数
+     * @param string $contentType 内容类型
+     * @return string|resource|null
+     * @throws \RuntimeException
+     */
+    public function buildBody(array $params)
+    {
+        // 重置 multipart 属性
+        $this->multipart = [];
+        if (!isset($this->headers['Content-Type'])) {
+            $this->headers['Content-Type'] = 'application/json';
+        }
+        switch ($this->headers['Content-Type']) {
+            // JSON格式（默认）
+            case 'application/json':
+                $json = json_encode($params, JSON_UNESCAPED_UNICODE);
+                if ($json === false) {
+                    throw new \RuntimeException(
+                        'JSON encode failed: ' . json_last_error_msg()
+                    );
+                }
+                return $json;
+
+            // 表单格式（x-www-form-urlencoded）
+            case 'application/x-www-form-urlencoded':
+                return http_build_query($params);
+
+            // 文件上传（multipart/form-data）
+            case 'multipart/form-data':
+                foreach ($params as $name => $value) {
+                    // 如果是文件路径（支持 @file 或直接文件资源）
+                    if (is_string($value) && str_starts_with($value, '@')) {
+                        $filePath = ltrim($value, '@');
+                        if (!file_exists($filePath) || !is_readable($filePath)) {
+                            throw new \RuntimeException("文件不存在或不可读：{$filePath}");
+                        }
+                        $this->multipart[] = [
+                            'name'     => $name,
+                            'contents' => fopen($filePath, 'r'),
+                            'filename' => basename($filePath)
+                        ];
+                    } // 如果是文件资源
+                    elseif (is_resource($value)) {
+                        $meta              = stream_get_meta_data($value);
+                        $this->multipart[] = [
+                            'name'     => $name,
+                            'contents' => $value,
+                            'filename' => basename($meta['uri'] ?? 'file')
+                        ];
+                    } // 如果是数组或对象（比如 messages 字段）
+                    elseif (is_array($value) || is_object($value)) {
+                        $this->multipart[] = [
+                            'name'     => $name,
+                            'contents' => json_encode($value, JSON_UNESCAPED_UNICODE)
+                        ];
+                    } // 普通文本
+                    else {
+                        $this->multipart[] = [
+                            'name'     => $name,
+                            'contents' => (string)$value
+                        ];
+                    }
+                }
+
+                // 用 MultipartStream 生成请求体
+                $boundary = bin2hex(random_bytes(16));
+                $stream   = new \GuzzleHttp\Psr7\MultipartStream($this->multipart, $boundary);
+                // 返回数组，方便直接构造 Request
+                $this->headers['Content-Type'] = 'multipart/form-data; boundary=' . $boundary;
+                return $stream;
+
+            // GET/无请求体场景
+            default:
+                return null;
+        }
+    }
+
 }

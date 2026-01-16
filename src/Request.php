@@ -12,9 +12,7 @@ class Request
 {
     private Client $client;
     private string $apiKey;
-    private int    $timeout = 10;
-    // 存储multipart/form-data参数（文件上传专用）
-    private array $multipart = [];
+    private int    $timeout = 120;
 
     /**
      * 初始化请求客户端
@@ -38,21 +36,12 @@ class Request
         $uri         = $payload->getDomain() . '/' . ltrim($payload->getUri(), '/');
         $method      = $payload->getMethod();
         $headers     = $this->buildHeaders($payload->getHeaders());
-        $contentType = $headers['Content-Type'] ?? 'application/json';
-        $body        = $this->buildBody($payload->getParams(), $contentType);
+        $body        = $payload->buildBody($payload->getParams());
 
         try {
-            // 构建Guzzle请求选项（区分multipart和普通请求）
-            $requestOptions = [];
-            if ($contentType === 'multipart/form-data') {
-                $requestOptions['multipart'] = $this->multipart;
-            } elseif ($body !== null) {
-                $requestOptions['body'] = $body;
-            }
-
             // 发送请求
-            $guzzleRequest = new GuzzleRequest($method, $uri, $headers);
-            $response      = $this->client->send($guzzleRequest, $requestOptions);
+            $guzzleRequest = new GuzzleRequest($method, $uri, $headers, $body);
+            $response      = $this->client->send($guzzleRequest);
 
             // 记录请求日志（可选）
             $this->logRequest($method, $uri, $payload->getParams(), $response->getStatusCode());
@@ -83,59 +72,7 @@ class Request
         return array_merge($baseHeaders, $payloadHeaders);
     }
 
-    /**
-     * 根据Content-Type构建请求体
-     * @param array $params 请求参数
-     * @param string $contentType 内容类型
-     * @return string|resource|null
-     * @throws \RuntimeException
-     */
-    private function buildBody(array $params, string $contentType)
-    {
-        // 重置multipart属性
-        $this->multipart = [];
 
-        switch ($contentType) {
-            // JSON格式（默认）
-            case 'application/json':
-                $json = json_encode($params, JSON_UNESCAPED_UNICODE);
-                if ($json === false) {
-                    throw new \RuntimeException(
-                        'JSON encode failed: ' . json_last_error_msg()
-                    );
-                }
-                return $json;
-            // 表单格式（x-www-form-urlencoded）
-            case 'application/x-www-form-urlencoded':
-                return http_build_query($params);
-            // 文件上传（multipart/form-data）
-            case 'multipart/form-data':
-                foreach ($params as $name => $value) {
-                    if (str_starts_with((string)$value, '@')) {
-                        $filePath = ltrim($value, '@');
-                        // 校验文件是否存在
-                        if (!file_exists($filePath)) {
-                            throw new \RuntimeException("文件不存在：{$filePath}");
-                        }
-                        // 校验文件是否可读
-                        if (!is_readable($filePath)) {
-                            throw new \RuntimeException("文件不可读：{$filePath}");
-                        }
-                        $this->multipart[] = [
-                            'name'     => $name,
-                            'contents' => fopen($filePath, 'r'),
-                            'filename' => basename($filePath)
-                        ];
-                    } else {
-                        $this->multipart[] = ['name' => $name, 'contents' => $value];
-                    }
-                }
-                return null;
-            // GET/无请求体场景
-            default:
-                return null;
-        }
-    }
 
     /**
      * 解析响应结果
