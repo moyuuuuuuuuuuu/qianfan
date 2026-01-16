@@ -2,9 +2,12 @@
 
 namespace Moyuuuuuuuu\Nutrition\Payload;
 
+use Moyuuuuuuuu\Nutrition\Util;
+
 class Universal extends BasePayload
 {
-    protected $payload = [];
+    protected string $domain  = 'https://qianfan.baidubce.com';
+    protected        $payload = [];
 
     /**
      * @inheritDoc
@@ -16,7 +19,13 @@ class Universal extends BasePayload
 
     public function add($key, $value)
     {
-        $this->payload[$key] = $value;
+        if (!str_contains($key, '.')) {
+            $this->payload[$key] = $value;
+            return $this;
+        }
+
+        Util::arrayByDot($this->payload, $key, $value);
+        return $this;
     }
 
 }

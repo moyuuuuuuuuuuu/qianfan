@@ -4,17 +4,17 @@ namespace Moyuuuuuuuu\Nutrition\Payload;
 
 abstract class BasePayload implements PayloadInterface
 {
-    protected string $domain;
-    protected string $path;
+    protected string $domain = '';
+    protected string $uri    = '';
 
-    public function getPath(): string
+    public function getUri(): string
     {
-        return $this->path;
+        return $this->uri;
     }
 
-    public function setPath(string $path): self
+    public function setUri(string $uri): self
     {
-        $this->path = $path;
+        $this->uri = $uri;
         return $this;
     }
 

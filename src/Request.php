@@ -34,14 +34,14 @@ class Request
     public function send(PayloadInterface $payload)
     {
         try {
-            $response = $this->client->post($payload->getPath(), [
+            $response = $this->client->post($payload->getUri(), [
                 $this->getKey() => $payload->build(),
             ]);
             $data     = json_decode($response->getBody()->getContents(), true);
             return $payload->formatResponse($data ?? []);
         } catch (ClientException $e) {
             throw new \RuntimeException($e->getResponse()->getBody()->getContents());
-        } finally {
+        } catch (\Exception $e) {
             throw new \RuntimeException($e->getMessage());
         }
     }
