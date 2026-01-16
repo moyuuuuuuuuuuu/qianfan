@@ -9,9 +9,12 @@ foreach ($lines as $line) {
     putenv(trim($name) . '=' . trim($value));
 }
 
+#模型
+$payload = new \Moyuuuuuuuu\Nutrition\Payload\Vision('ernie-4.5-turbo-vl-latest');
+$payload->addText(file_get_contents($basePath . '/src/template'));
+$payload->addImage(($basePath . '/images/1.jpeg'));
+$payload->setPath('/v2/chat/completions');
+$request = new \Moyuuuuuuuu\Nutrition\Request($payload->domain(), getenv('API_KEY'), 'application/json');
+$res     = $request->send($payload);
 
-$request  = new \Moyuuuuuuuu\Nutrition\Request();
-$image    = $basePath . '/images/3.jpeg';
-$response = $request->addImage($image)->addText(file_get_contents($basePath . '/src/template'))->do();
-
-$response = \Moyuuuuuuuu\Nutrition\Util::parseNutrition($response);
+var_dump($res);

@@ -9,7 +9,7 @@ class Util
      * @param string $content
      * @return array|null
      */
-    static function parseNutrition(array $content)
+    static function parseNutrition($content)
     {
 
         if (empty($content)) {
