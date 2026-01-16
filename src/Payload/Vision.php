@@ -10,6 +10,7 @@ use RuntimeException;
 class Vision extends BasePayload implements PayloadInterface
 {
 
+    protected string $domain  = 'https://qianfan.baidubce.com';
     protected string $model;
     protected array  $options;
     protected array  $content = [];
@@ -38,11 +39,6 @@ class Vision extends BasePayload implements PayloadInterface
         $this->options = $options;
     }
 
-    public function domain(): string
-    {
-        return 'https://qianfan.baidubce.com';
-    }
-
     public function build(): array
     {
         return array_merge([
@@ -55,7 +51,6 @@ class Vision extends BasePayload implements PayloadInterface
             ],
         ], $this->options);
     }
-
 
     /**
      * 添加文本内容
@@ -132,7 +127,7 @@ class Vision extends BasePayload implements PayloadInterface
         return $this;
     }
 
-    public function formatResponse(array $data): array|\Exception
+    public function formatResponse(array $data, callable $callable = null): array|\Exception
     {
         if (isset($data['error'])) {
             throw new \RuntimeException('接口错误：' . $data['error']['message'] ?? '未知错误');

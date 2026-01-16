@@ -4,7 +4,6 @@ namespace Moyuuuuuuuu\Nutrition\Payload;
 
 interface PayloadInterface
 {
-    public function domain(): string;
 
     /**
      * 构建请求载荷
@@ -12,5 +11,5 @@ interface PayloadInterface
      */
     public function build(): array;
 
-    public function formatResponse(array $data): array|\Exception;
+    public function formatResponse(array $data, callable $callable = null): array|\Exception;
 }

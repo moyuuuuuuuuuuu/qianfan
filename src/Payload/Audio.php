@@ -8,6 +8,7 @@ class Audio extends BasePayload implements PayloadInterface
 {
 
     protected string $speech;
+    protected string $domain = 'http://vop.baidu.com';
     protected array  $audioOptions;
 
     /**
@@ -27,11 +28,6 @@ class Audio extends BasePayload implements PayloadInterface
         $this->audioOptions = $audioOptions;
     }
 
-    public function domain(): string
-    {
-        return 'http://vop.baidu.com';
-    }
-
     public function build(): array
     {
         return array_merge([
@@ -44,7 +40,7 @@ class Audio extends BasePayload implements PayloadInterface
         ], $this->audioOptions);
     }
 
-    public function formatResponse(array $data): array|\Exception
+    public function formatResponse(array $data, callable $callable = null): array|\Exception
     {
         if (isset($data['error_no']) && $data['error_no'] !== 0) {
             throw new RuntimeException($data['err_msg'], $data['error_no']);
