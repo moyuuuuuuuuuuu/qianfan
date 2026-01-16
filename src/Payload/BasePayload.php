@@ -1,9 +1,8 @@
 <?php
 
-namespace Moyuuuuuuuu\Nutrition\Payload;
+namespace Moyuuuuuuuu\QianFan\Payload;
 
-use Moyuuuuuuuu\Nutrition\Contants\RequestMethod;
-use Moyuuuuuuuu\Nutrition\Contants\Role;
+use Moyuuuuuuuu\QianFan\{Contants\RequestMethod, Contants\Role};
 
 class BasePayload
 {
@@ -80,7 +79,7 @@ class BasePayload
         return $this;
     }
 
-    public function setHeader(string $key, mixed $value): self
+    public function setHeader(string $key, $value): self
     {
         $this->headers[$key] = $value;
         return $this;

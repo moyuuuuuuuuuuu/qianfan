@@ -1,6 +1,6 @@
 <?php
 
-namespace Moyuuuuuuuu\Nutrition;
+namespace Moyuuuuuuuu\QianFan;
 
 use RuntimeException;
 

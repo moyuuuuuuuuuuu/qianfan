@@ -1,10 +1,10 @@
 <?php
 
-namespace Moyuuuuuuuu\Nutrition\Payload;
+namespace Moyuuuuuuuu\QianFan\Payload;
 
-use Moyuuuuuuuu\Nutrition\Contants\ContentType;
-use Moyuuuuuuuu\Nutrition\Contants\Role;
-use Moyuuuuuuuu\Nutrition\Util;
+use Moyuuuuuuuu\QianFan\Contants\ContentType;
+use Moyuuuuuuuu\QianFan\Contants\Role;
+use Moyuuuuuuuu\QianFan\Util;
 use RuntimeException;
 
 class Vision extends BasePayload implements PayloadInterface

@@ -1,8 +1,8 @@
 <?php
 
-use Moyuuuuuuuu\Nutrition\Payload\Universal;
-use Moyuuuuuuuu\Nutrition\Contants\{RequestMethod, Role, ContentType};
-use Moyuuuuuuuu\Nutrition\Util;
+use Moyuuuuuuuu\QianFan\Payload\Universal;
+use Moyuuuuuuuu\QianFan\Contants\{RequestMethod, Role, ContentType};
+use Moyuuuuuuuu\QianFan\Util;
 
 $basePath = dirname(__DIR__);
 include $basePath . '/vendor/autoload.php';
@@ -14,13 +14,13 @@ foreach ($lines as $line) {
 }
 /*
 #模型
-$payload = new \Moyuuuuuuuu\Nutrition\Payload\Vision('ernie-4.5-turbo-vl-latest');
+$payload = new \Moyuuuuuuuu\QianFan\Payload\Vision('ernie-4.5-turbo-vl-latest');
 $payload->addText(file_get_contents($basePath . '/src/template'));
 $payload->addImage(($basePath . '/images/1.jpeg'));
 $payload->setUri('/v2/chat/completions');*/
 
 #获取模型列表
-$payload = (new \Moyuuuuuuuu\Nutrition\Payload\Universal())
+$payload = (new \Moyuuuuuuuu\QianFan\Payload\Universal())
     ->setDomain('https://qianfan.baidubce.com')
     ->setUri('v2/models')->setMethod(RequestMethod::GET);
 
@@ -76,7 +76,7 @@ $payload = (new Universal())
     ->add('dev_pid', 1537)
     ->add('len', filesize($basePath . '/speech/1.m4a'))
     ->add('rate', 16000);
-$request = new \Moyuuuuuuuu\Nutrition\Request(getenv('API_KEY'));
+$request = new \Moyuuuuuuuu\QianFan\Request(getenv('API_KEY'));
 $res     = $request->send($payload);
 
 var_dump($res);

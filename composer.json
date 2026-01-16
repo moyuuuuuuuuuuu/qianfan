@@ -1,6 +1,6 @@
 {
-    "name": "moyuuuuuuuu/nutrition",
-    "description": "调用ai模型返回食物照片所包含的各类营养素信息",
+    "name": "moyuuuuuuuu/qianfan",
+    "description": "千帆api客户端",
     "require": {
         "php": ">=7.4",
         "guzzlehttp/guzzle": "^7.10"
@@ -8,7 +8,7 @@
     "license": "Apache-2.0",
     "autoload": {
         "psr-4": {
-            "Moyuuuuuuuu\\Nutrition\\": "src/"
+            "Moyuuuuuuuu\\QianFan\\": "src/"
         }
     },
     "authors": [

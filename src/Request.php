@@ -1,10 +1,9 @@
 <?php
 
-namespace Moyuuuuuuuu\Nutrition;
+namespace Moyuuuuuuuu\QianFan;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\{RequestException,GuzzleException};
 use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use Psr\Http\Message\ResponseInterface;
 

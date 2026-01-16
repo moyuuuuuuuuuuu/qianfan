@@ -1,6 +1,6 @@
 <?php
 
-namespace Moyuuuuuuuu\Nutrition\Contants;
+namespace Moyuuuuuuuu\QianFan\Contants;
 
 enum Role: string
 {

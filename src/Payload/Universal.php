@@ -1,6 +1,6 @@
 <?php
 
-namespace Moyuuuuuuuu\Nutrition\Payload;
+namespace Moyuuuuuuuu\QianFan\Payload;
 
 class Universal extends BasePayload
 {
