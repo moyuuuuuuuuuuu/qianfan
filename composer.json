@@ -2,7 +2,7 @@
     "name": "moyuuuuuuuu/qianfan",
     "description": "千帆api客户端",
     "require": {
-        "php": ">=7.4",
+        "php": ">=8.0",
         "guzzlehttp/guzzle": "^7.10"
     },
     "license": "Apache-2.0",

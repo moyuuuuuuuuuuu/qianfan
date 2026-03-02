@@ -3,7 +3,7 @@
 namespace Moyuuuuuuuu\QianFan;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\{RequestException,GuzzleException};
+use GuzzleHttp\Exception\{RequestException, GuzzleException};
 use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use Psr\Http\Message\ResponseInterface;
 
@@ -13,15 +13,25 @@ class Request
     private string $apiKey;
     private int    $timeout = 120;
 
+    protected array $log = [
+        'open'     => false,
+        'log_file' => null,
+    ];
+
     /**
      * 初始化请求客户端
      * @param string $apiKey API密钥
      * @param array $options 客户端配置（超时、重试等）
+     * @param array{
+     *     open:bool,
+     *     log_file:string
+     * } $log
      */
-    public function __construct(string $apiKey, array $options = [])
+    public function __construct(string $apiKey, array $options = [], array $log = [])
     {
         $this->apiKey = $apiKey;
-        $this->client = new Client(array_merge($options, ['timeout' => $this->timeout, 'verify' => false]));
+        $this->log    = array_merge($this->log, $log);
+        $this->client = new Client(array_merge(['timeout' => $this->timeout, 'verify' => false], $options));
     }
 
     /**
@@ -32,10 +42,10 @@ class Request
      */
     public function send(Payload\BasePayload $payload): array
     {
-        $uri         = $payload->getDomain() . '/' . ltrim($payload->getUri(), '/');
-        $method      = $payload->getMethod();
-        $headers     = $this->buildHeaders($payload->getHeaders());
-        $body        = $payload->buildBody($payload->getParams());
+        $uri     = $payload->getDomain() . '/' . ltrim($payload->getUri(), '/');
+        $method  = $payload->getMethod();
+        $headers = $this->buildHeaders($payload->getHeaders());
+        $body    = $payload->buildBody($payload->getParams());
 
         try {
             // 发送请求
@@ -72,7 +82,6 @@ class Request
     }
 
 
-
     /**
      * 解析响应结果
      * @param ResponseInterface $response
@@ -105,18 +114,26 @@ class Request
      */
     private function logRequest(string $method, string $uri, array $params, int $statusCode): void
     {
-        $logDir = __DIR__ . '/../logs';
-        if (!is_dir($logDir)) {
-            mkdir($logDir, 0755, true);
+        if (!($this->log['open'] ?? false)) {
+            return;
         }
+
+        $logFile = $this->log['log_file'];
+
+        $logDir = dirname($logFile);
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+
         $log = sprintf(
-            "[%s] %s %s | 状态码：%d | 参数：%s\n",
+            "[%s] %s %s | 状态码：%d | 参数：%s" . PHP_EOL,
             date('Y-m-d H:i:s'),
-            $method,
+            strtoupper($method),
             $uri,
             $statusCode,
-            json_encode($params, JSON_UNESCAPED_UNICODE)
+            json_encode($params, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR)
         );
-        file_put_contents($logDir . '/request.log', $log, FILE_APPEND);
+
+        file_put_contents($logFile, $log, FILE_APPEND | LOCK_EX);
     }
 }

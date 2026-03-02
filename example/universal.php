@@ -15,8 +15,8 @@ foreach ($lines as $line) {
 /*
 #模型
 $payload = new \Moyuuuuuuuu\QianFan\Payload\Vision('ernie-4.5-turbo-vl-latest');
-$payload->addText(file_get_contents($basePath . '/src/template'));
-$payload->addImage(($basePath . '/images/1.jpeg'));
+$payload->addText(file_get_contents( './template/text'));
+$payload->addImage(( './images/1.jpeg'));
 $payload->setUri('/v2/chat/completions');*/
 
 #获取模型列表
@@ -29,7 +29,7 @@ $payload = (new Universal())
     ->setDomain('https://qianfan.baidubce.com')
     ->setUri('v2/chat/completions')
     ->setMethod(RequestMethod::POST)
-    ->addMessage(Role::SYSTEM, file_get_contents($basePath . '/src/Template/text'))
+    ->addMessage(Role::SYSTEM, file_get_contents('./template/text'))
     ->add('model', 'ERNIE-5.0-Thinking-Preview');
 
 #视觉理解
@@ -37,18 +37,18 @@ $payload = (new Universal())
     ->setDomain('https://qianfan.baidubce.com')
     ->setUri('v2/chat/completions')
     ->setMethod(RequestMethod::POST)
-//    ->addMessage(Role::SYSTEM, file_get_contents($basePath . '/src/Template/text'))
+//    ->addMessage(Role::SYSTEM, file_get_contents($basePath . './template/text'))
     ->add('messages', [
         [
             'role'    => Role::USER->value,
             'content' => [
                 [
                     'type' => 'text',
-                    'text' => file_get_contents($basePath . '/src/Template/image')
+                    'text' => file_get_contents('./template/image')
                 ],
                 [
                     'type'      => 'image_url',
-                    'image_url' => ['url' => Util::baseFile($basePath . '/images/1.jpeg')]
+                    'image_url' => ['url' => Util::baseFile('./images/1.jpeg')]
                 ]
             ]
         ]
@@ -69,12 +69,12 @@ $payload = (new Universal())
     ->setUri('/server_api')
     ->setMethod(RequestMethod::POST)
     ->setHeader('Content-Type', 'application/json')
-    ->add('speech', Util::baseFile($basePath . '/speech/1.m4a',null,false))
+    ->add('speech', Util::baseFile('./speech/1.m4a', null, false))
     ->add('format', 'm4a')
     ->add('channel', 1)
     ->add('cuid', 'default_user')
     ->add('dev_pid', 1537)
-    ->add('len', filesize($basePath . '/speech/1.m4a'))
+    ->add('len', filesize('./speech/1.m4a'))
     ->add('rate', 16000);
 $request = new \Moyuuuuuuuu\QianFan\Request(getenv('API_KEY'));
 $res     = $request->send($payload);
