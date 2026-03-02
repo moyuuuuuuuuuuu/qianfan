@@ -37,10 +37,15 @@ class Request
     /**
      * 通用发送方法（适配所有请求类型）
      * @param Payload\Universal $payload 请求载荷
+     * @param array{
+     *     stream:bool,
+     *     read_timeout:int|null,
+     *     connect_timeout:int|null
+     * } $options
      * @return array
      * @throws \RuntimeException
      */
-    public function send(Payload\BasePayload $payload): array
+    public function send(Payload\BasePayload $payload, array $options = []): array
     {
         $uri     = $payload->getDomain() . '/' . ltrim($payload->getUri(), '/');
         $method  = $payload->getMethod();
@@ -50,7 +55,7 @@ class Request
         try {
             // 发送请求
             $guzzleRequest = new GuzzleRequest($method, $uri, $headers, $body);
-            $response      = $this->client->send($guzzleRequest);
+            $response      = $this->client->send($guzzleRequest, $options);
 
             // 记录请求日志（可选）
             $this->logRequest($method, $uri, $payload->getParams(), $response->getStatusCode());
